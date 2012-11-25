@@ -8,6 +8,7 @@ using System.Web.Security;
 using FacebookTest.Models;
 using Facebook;
 using System.Configuration;
+using FacebookTest.Classes;
 
 namespace FacebookTest.Controllers
 {
@@ -16,16 +17,35 @@ namespace FacebookTest.Controllers
 
 
 
-
-        //
-        // GET: /Account/LogOn
+       
 
         public ActionResult LogOn()
         {
             return View();
         }
 
-        public ActionResult LogOnFacebook()
+
+
+
+
+        public ActionResult SignUp()
+        {
+            return View();
+        }
+
+        public ActionResult Register()
+        {
+            return View();
+        }
+
+
+        #region Facebook
+
+
+
+
+
+        public ActionResult SignUpFacebook()
         {
             // Build the Return URI form the Request Url
             var redirectUri = new UriBuilder(Request.Url);
@@ -53,8 +73,40 @@ namespace FacebookTest.Controllers
         }
 
 
+        public ActionResult LogOnFacebook()
+        {
+            // Build the Return URI form the Request Url
+            var redirectUri = new UriBuilder(Request.Url);
+            redirectUri.Path = Url.Action("FbAuth", "Account");
+
+            //Get the Public Uri due to apphabor getting all "cloudy" with ports
+            var urlHelper = new UrlHelper(Request.RequestContext);
+            var publicUrl = urlHelper.ToPublicUrl(redirectUri.Uri);
+            
+
+            
 
 
+            var client = new FacebookClient();
+
+
+
+
+            // Generate the Facebook OAuth URL
+            // Example: https://www.facebook.com/dialog/oauth?
+            //                client_id=YOUR_APP_ID
+            //               &redirect_uri=YOUR_REDIRECT_URI
+            //               &scope=COMMA_SEPARATED_LIST_OF_PERMISSION_NAMES
+            //               &state=SOME_ARBITRARY_BUT_UNIQUE_STRING
+            var uri = client.GetLoginUrl(new
+            {
+                client_id = ConfigurationManager.AppSettings["FacebookAppId"],
+                redirect_uri = publicUrl,
+                scope = "email",
+            });
+
+            return Redirect(uri.ToString());
+        }
 
         public ActionResult FbAuth(string returnUrl)
         {
@@ -119,5 +171,7 @@ namespace FacebookTest.Controllers
                 return Redirect(returnUrl);
             }
         }
+
+        #endregion
     }
 }
