@@ -27,7 +27,7 @@ namespace FacebookTest.Classes
                 uriBuilder.Port = httpContext.Request.Url.Port;
             }
 
-            return new Uri(uriBuilder.Uri, relativeUri).AbsoluteUri;
+            return new Uri(uriBuilder.Uri, relativeUri.LocalPath).AbsoluteUri;
         }
 
     }
