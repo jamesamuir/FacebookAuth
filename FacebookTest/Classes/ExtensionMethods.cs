@@ -8,7 +8,7 @@ using System.Web.Mvc;
 namespace FacebookTest.Classes
 {
     public static class ExtensionMethods
-    {
+   { 
 
         public static string ToPublicUrl(this UrlHelper urlHelper, Uri relativeUri)
         {
@@ -27,7 +27,7 @@ namespace FacebookTest.Classes
                 uriBuilder.Port = httpContext.Request.Url.Port;
             }
 
-            return new Uri(uriBuilder.Uri, relativeUri).AbsoluteUri;
+            return new Uri(uriBuilder.Uri, relativeUri.LocalPath).AbsoluteUri;
         }
 
     }
