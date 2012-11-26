@@ -113,7 +113,10 @@ namespace FacebookTest.Controllers
 
             
                 var client = new FacebookClient();
-                var oauthResult = client.ParseOAuthCallbackUrl(Request.Url);
+                try
+                {
+                    var oauthResult = client.ParseOAuthCallbackUrl(Request.Url);
+                
 
                 // Build the Return URI form the Request Url
                 var redirectUri = new UriBuilder(Request.Url);
@@ -161,14 +164,22 @@ namespace FacebookTest.Controllers
                 // Set the Auth Cookie
                 FormsAuthentication.SetAuthCookie(email, false);
 
+                }
+                catch (Exception ex)
+                {
+                    Elmah.ErrorSignal.FromCurrentContext().Raise(ex);
+                }
+
+
                 // Redirect to the return url if availible
                 if (String.IsNullOrEmpty(returnUrl))
                 {
-                    return Redirect("/ProfileInfo");
+                    return RedirectToAction("Index", "Home");
                 }
                 else
                 {
-                    return Redirect(returnUrl);
+                    return RedirectToAction("Index", "Home");
+                    //return Redirect(returnUrl);
                 }
             
         }
