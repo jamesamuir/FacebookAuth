@@ -111,65 +111,66 @@ namespace FacebookTest.Controllers
         public ActionResult FbAuth(string returnUrl)
         {
 
+            
+                var client = new FacebookClient();
+                var oauthResult = client.ParseOAuthCallbackUrl(Request.Url);
 
-            var client = new FacebookClient();
-            var oauthResult = client.ParseOAuthCallbackUrl(Request.Url);
+                // Build the Return URI form the Request Url
+                var redirectUri = new UriBuilder(Request.Url);
+                redirectUri.Path = Url.Action("FbAuth", "Account");
 
-            // Build the Return URI form the Request Url
-            var redirectUri = new UriBuilder(Request.Url);
-            redirectUri.Path = Url.Action("FbAuth", "Account");
+                // Exchange the code for an access token
+                dynamic result = client.Get("/oauth/access_token", new
+                {
+                    client_id = ConfigurationManager.AppSettings["FacebookAppId"],
+                    redirect_uri = redirectUri.Uri.AbsoluteUri,
+                    client_secret = ConfigurationManager.AppSettings["FacebookAppSecret"],
+                    code = oauthResult.Code,
+                });
 
-            // Exchange the code for an access token
-            dynamic result = client.Get("/oauth/access_token", new
-            {
-                client_id = ConfigurationManager.AppSettings["FacebookAppId"],
-                redirect_uri = redirectUri.Uri.AbsoluteUri,
-                client_secret = ConfigurationManager.AppSettings["FacebookAppSecret"],
-                code = oauthResult.Code,
-            });
+                // Read the auth values
+                string accessToken = result.access_token;
+                DateTime expires = DateTime.UtcNow.AddSeconds(Convert.ToDouble(result.expires));
 
-            // Read the auth values
-            string accessToken = result.access_token;
-            DateTime expires = DateTime.UtcNow.AddSeconds(Convert.ToDouble(result.expires));
+                // Get the user's profile information
+                dynamic me = client.Get("/me",
+                              new
+                              {
+                                  fields = "first_name,last_name,email",
+                                  access_token = accessToken
+                              });
 
-            // Get the user's profile information
-            dynamic me = client.Get("/me",
-                          new
-                          {
-                              fields = "first_name,last_name,email",
-                              access_token = accessToken
-                          });
+                // Read the Facebook user values
+                long facebookId = Convert.ToInt64(me.id);
+                string firstName = me.first_name;
+                string lastName = me.last_name;
+                string email = me.email;
 
-            // Read the Facebook user values
-            long facebookId = Convert.ToInt64(me.id);
-            string firstName = me.first_name;
-            string lastName = me.last_name;
-            string email = me.email;
+                //// Add the user to our persistent store
+                //var userService = new UserService();
+                //userService.AddOrUpdateUser(new User
+                //{
+                //    Id = facebookId,
+                //    FirstName = firstName,
+                //    LastName = lastName,
+                //    Email = email,
+                //    AccessToken = accessToken,
+                //    Expires = expires
+                //});
 
-            //// Add the user to our persistent store
-            //var userService = new UserService();
-            //userService.AddOrUpdateUser(new User
-            //{
-            //    Id = facebookId,
-            //    FirstName = firstName,
-            //    LastName = lastName,
-            //    Email = email,
-            //    AccessToken = accessToken,
-            //    Expires = expires
-            //});
+                // Set the Auth Cookie
+                FormsAuthentication.SetAuthCookie(email, false);
 
-            // Set the Auth Cookie
-            FormsAuthentication.SetAuthCookie(email, false);
-
-            // Redirect to the return url if availible
-            if (String.IsNullOrEmpty(returnUrl))
-            {
-                return Redirect("/Index");
-            }
-            else
-            {
-                return Redirect(returnUrl);
-            }
+                // Redirect to the return url if availible
+                if (String.IsNullOrEmpty(returnUrl))
+                {
+                    return Redirect("/ProfileInfo");
+                }
+                else
+                {
+                    return Redirect(returnUrl);
+                }
+            
         }
 
         #endregion
