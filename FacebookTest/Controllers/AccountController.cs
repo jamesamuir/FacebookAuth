@@ -116,17 +116,26 @@ namespace FacebookTest.Controllers
                 try
                 {
                     var oauthResult = client.ParseOAuthCallbackUrl(Request.Url);
-                
 
-                // Build the Return URI form the Request Url
-                var redirectUri = new UriBuilder(Request.Url);
-                redirectUri.Path = Url.Action("FbAuth", "Account");
+
+                    // Build the Return URI form the Request Url
+                    var redirectUri = new UriBuilder(Request.Url);
+                    redirectUri.Path = Url.Action("FbAuth", "Account");
+
+                    //Get the Public Uri due to apphabor getting all "cloudy" with ports
+                    var urlHelper = new UrlHelper(Request.RequestContext);
+                    var publicUrl = urlHelper.ToPublicUrl(redirectUri.Uri);
+
+
+
+
+
 
                 // Exchange the code for an access token
                 dynamic result = client.Get("/oauth/access_token", new
                 {
                     client_id = ConfigurationManager.AppSettings["FacebookAppId"],
-                    redirect_uri = redirectUri.Uri.AbsoluteUri,
+                    redirect_uri = publicUrl,
                     client_secret = ConfigurationManager.AppSettings["FacebookAppSecret"],
                     code = oauthResult.Code,
                 });
