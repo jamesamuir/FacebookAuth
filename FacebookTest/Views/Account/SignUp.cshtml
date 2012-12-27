@@ -1,11 +1,14 @@
 ﻿@{
     ViewBag.Title = "Sign Up";
 }
-
-<h2>Sign Up</h2>
+<h2>Create an account to get all the benefits of YOUR WEBSITE</h2>
+<h2>Connect with</h2>
 <p>
-   @Html.ActionLink("Connect with Facebook", "SignUpFacebook")
+   @Html.ActionLink("Facebook", "SignUpFacebook")
 </p>
-<p>or sign up with your @Html.ActionLink("email address", "register")</p>
+<hr />
+<p>or, sign up with  @Html.ActionLink("your email address", "Register")</p>
+<hr />
+<p>Already have an account? @Html.ActionLink("Log in.", "Login")</p>
 
 

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
+using Raven.Client.Indexes;
+using FacebookTest.Raven;
 
 namespace FacebookTest
 {
@@ -36,6 +38,13 @@ namespace FacebookTest
 
             RegisterGlobalFilters(GlobalFilters.Filters);
             RegisterRoutes(RouteTable.Routes);
+
+            //Init the store
+            FacebookTest.Raven.DataDocumentStore.Initialize();
+
+            //Register indexes
+            IndexCreation.CreateIndexes(typeof(AccountUser_ByFacebookId).Assembly, FacebookTest.Raven.DataDocumentStore.Instance);
+
         }
     }
 }

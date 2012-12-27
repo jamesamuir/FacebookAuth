@@ -1,0 +1,40 @@
+﻿@model FacebookTest.Models.LogInModel
+
+@{
+    ViewBag.Title = "Login";
+}
+
+<h2>Your Website Name!</h2>
+<p>
+   @Html.ActionLink("Login with Facebook", "LogInFacebook")
+</p>
+<hr />
+@using (Html.BeginForm())
+{
+      <div>
+       
+            <div class="editor-label">
+                @Html.LabelFor(m => m.Email)
+            </div>
+            <div class="editor-field">
+                @Html.TextBoxFor(m => m.Email)
+                @Html.ValidationMessageFor(m => m.Email)
+            </div>
+
+            <div class="editor-label">
+                @Html.LabelFor(m => m.Password)
+            </div>
+            <div class="editor-field">
+                @Html.TextBoxFor(m => m.Password)
+                @Html.ValidationMessageFor(m => m.Password)
+            </div>
+
+            <p>
+                <input type="submit" value="Submit" />
+            </p>
+       
+    </div>
+}
+
+
+
