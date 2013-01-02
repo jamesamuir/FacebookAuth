@@ -58,7 +58,7 @@ namespace FacebookTest.Services.Classes
                     {
                         
                         Name = email,
-                        Id = String.Format("Raven/Users/{0}", userId.ToString()),
+                        Id = String.Format("FacebookTest/Users/{0}", userId.ToString()),
                         AllowedDatabases = new[] { "*" },
                         FirstName = firstName,
                         LastName = lastName,
@@ -69,7 +69,7 @@ namespace FacebookTest.Services.Classes
 
                     //Save Changes
                     Session.SaveChanges();
-                    return Session.Load<AccountUserDocument>(String.Format("Raven/Users/{0}", userId));
+                    return Session.Load<AccountUserDocument>(String.Format("FacebookTest/Users/{0}", userId));
                     
                 }
 
@@ -89,7 +89,7 @@ namespace FacebookTest.Services.Classes
                 Session.Store(new AccountUserDocument
                 {
                     Name = model.Email,
-                    Id = String.Format("Raven/Users/{0}", userId),
+                    Id = String.Format("FacebookTest/Users/{0}", userId),
                     AllowedDatabases = new[] { "*" },
 
                     Email = model.Email,
@@ -102,7 +102,7 @@ namespace FacebookTest.Services.Classes
                 }.SetPassword(model.Password));
                 Session.SaveChanges();
 
-                return Session.Load<AccountUserDocument>(String.Format("Raven/Users/{0}", userId));
+                return Session.Load<AccountUserDocument>(String.Format("FacebookTest/Users/{0}", userId));
             }
 
         }
@@ -168,7 +168,7 @@ namespace FacebookTest.Services.Classes
         {
             using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
             {
-                Session.Load<AccountUserDocument>(String.Format("Raven/Users/{0}", id)).SetPassword(newPassword);
+                Session.Load<AccountUserDocument>(String.Format("FacebookTest/Users/{0}", id)).SetPassword(newPassword);
             }
         }
 
