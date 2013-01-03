@@ -5,7 +5,7 @@ using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
 using System.Web.Security;
-using FacebookTest.Models;
+using FacebookTest.Models.ViewModels;
 using Facebook;
 using System.Configuration;
 using FacebookTest.Classes;
@@ -70,40 +70,40 @@ namespace FacebookTest.Controllers
 
 
         #region Register
-        // GET: /Account/Register
-        public ActionResult Register()
-        {
-            return View();
-        }
-
-        //
-        // POST: /Account/Register
-        [HttpPost]
-        public ActionResult Register(RegisterModel model)
-        {
-            if (ModelState.IsValid  && AccountService.IsAvailableUser(model.Email))
+            // GET: /Account/Register
+            public ActionResult Register()
             {
-                //Create user
-                var user = AccountService.CreateUser(model);
-
-                //Call the authenticate 
-                AuthenticateUser(user.Id, user.FirstName, user.LastName, user.Email, user.FacebookId, user.AccessToken);
-
-                //Redirect to profile info
-                return RedirectToAction("Index", "Home");
-
+                return View();
             }
 
-            // If we got this far, something failed, redisplay form
-            return View(model);
-        }
+            //
+            // POST: /Account/Register
+            [HttpPost]
+            public ActionResult Register(RegisterModel model)
+            {
+                if (ModelState.IsValid  && AccountService.IsAvailableUser(model.Email))
+                {
+                    //Create user
+                    var user = AccountService.CreateUser(model);
+
+                    //Call the authenticate 
+                    AuthenticateUser(user.Id, user.FirstName, user.LastName, user.Email, user.FacebookId, user.AccessToken);
+
+                    //Redirect to profile info
+                    return RedirectToAction("Index", "Home");
+
+                }
+
+                // If we got this far, something failed, redisplay form
+                return View(model);
+            }
         #endregion
 
         
         #region Facebook
 
 
-        public ActionResult SignUpFacebook()
+            public ActionResult SignUpFacebook()
             {
                 // Build the Return URI form the Request Url
                 var redirectUri = new UriBuilder(Request.Url);
@@ -245,6 +245,31 @@ namespace FacebookTest.Controllers
             
             }
 
+        #endregion
+
+        #region ForgotPassword
+            // GET: /Account/ForgotPassword
+            public ActionResult ForgotPassword()
+            {
+                ForgotPasswordModel model = new ForgotPasswordModel();
+                return View(model);
+            }
+            //
+            // POST: /Account/Register
+            [HttpPost]
+            public ActionResult ForgotPassword(ForgotPasswordModel model)
+            {
+
+                //Check valid email, process password reset
+                if (ModelState.IsValid)
+                {
+
+
+                    return RedirectToAction("Content", "EmailSent", new { });
+                }
+
+                return View(model);
+            }
         #endregion
         
         #region Logoff

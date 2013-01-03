@@ -6,9 +6,11 @@ using FacebookTest.Services.Interfaces;
 using Raven.Client;
 using FacebookTest.Raven;
 using Raven.Bundles.Authentication;
-using FacebookTest.Raven;
-using FacebookTest.Models;
+using FacebookTest.Models.DataDocuments;
+using FacebookTest.Models.ViewModels;
 using Raven.Client.Linq;
+using System.Dynamic;
+using System.Configuration;
 
 
 namespace FacebookTest.Services.Classes
@@ -134,13 +136,8 @@ namespace FacebookTest.Services.Classes
         {
             using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
             {
-                RavenQueryStatistics stats;
-                var user = Session.Query<AccountUserDocument>().Statistics(out stats).Where(x => x.Name == email).SingleOrDefault();
 
-                if (stats.IsStale)
-                {
-                    Console.Write("stale");
-                }
+                var user = Session.Query<AccountUserDocument>().Where(x => x.Name == email).SingleOrDefault();
 
 
                 if (user == null)
@@ -164,6 +161,54 @@ namespace FacebookTest.Services.Classes
             }
         }
 
+        public void ProcessForgotPassword(string email)
+        {
+            using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
+            {
+                //Get user info
+                var user = Session.Query<AccountUserDocument>().Where(x => x.Name == email).SingleOrDefault();
+
+                //Create reset object
+                BCryptService crypto = new BCryptService();
+                var identifier = crypto.GenerateToken();
+                var resetDocument = new ResetPasswordDocument
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Identifier = identifier,
+                    Hash = crypto.Hash(identifier)
+
+                };
+
+                //Creste reset Url
+                resetDocument.ResetUrl = ConfigurationManager.AppSettings["BaseUrl"] + "Account/ResetPassword?prc=" + resetDocument.Hash;
+
+                //Persist reset object
+                Session.Store(resetDocument);
+                Session.SaveChanges();
+                
+                
+
+
+                if (user != null)
+                {
+                    dynamic emailProperties = new ExpandoObject();
+                    emailProperties.Type = EmailType.ForgotPassword;
+                    emailProperties.ToAddress = user.Email;
+                    emailProperties.FirstName = user.FirstName;
+                    emailProperties.Url = resetDocument.ResetUrl;
+                    EmailService.SendMail(emailProperties);
+                }
+                else
+                {
+                    throw new Exception("User not found by specified email address");
+                }
+
+            }
+        }
+
+
+
         public void ChangePassword(string id, string newPassword)
         {
             using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
@@ -171,7 +216,6 @@ namespace FacebookTest.Services.Classes
                 Session.Load<AccountUserDocument>(String.Format("FacebookTest/Users/{0}", id)).SetPassword(newPassword);
             }
         }
-
 
 
         

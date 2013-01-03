@@ -4,7 +4,7 @@ using System.Linq;
 using System.Web;
 using Raven.Bundles.Authentication;
 
-namespace FacebookTest.Raven
+namespace FacebookTest.Models.DataDocuments
 {
     public class AccountUserDocument : AuthenticationUser
     {
@@ -14,5 +14,7 @@ namespace FacebookTest.Raven
         public long FacebookId { get; set; }
         public string AccessToken { get; set; }
         public DateTime Expires { get; set; }
+
+        public bool EmailVerified { get; set; }
     }
 }

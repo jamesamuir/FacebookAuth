@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web;
 using Raven.Client.Indexes;
 using Raven.Bundles.Authentication;
+using FacebookTest.Models.DataDocuments;
 
 namespace FacebookTest.Raven
 {

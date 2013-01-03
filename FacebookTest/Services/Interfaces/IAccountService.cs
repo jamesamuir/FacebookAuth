@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using FacebookTest.Raven;
-using FacebookTest.Models;
+using FacebookTest.Models.DataDocuments;
+using FacebookTest.Models.ViewModels;
 
 namespace FacebookTest.Services.Interfaces
 {
@@ -15,6 +15,7 @@ namespace FacebookTest.Services.Interfaces
         void DeleteUser(string Id);
         AccountUserDocument GetUser(string email);
         bool ValidateUser(string email, string password);
+        void ProcessForgotPassword(string email);
         void ChangePassword(string email, string newPassword);
 
     }
