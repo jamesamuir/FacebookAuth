@@ -109,6 +109,11 @@ namespace FacebookTest.Controllers
                 var redirectUri = new UriBuilder(Request.Url);
                 redirectUri.Path = Url.Action("FbAuth", "Account");
 
+                //Get the Public Uri due to apphabor getting all "cloudy" with ports
+                var urlHelper = new UrlHelper(Request.RequestContext);
+                var publicUrl = urlHelper.ToPublicUrl(redirectUri.Uri);
+
+
                 var client = new FacebookClient();
 
 
@@ -125,7 +130,7 @@ namespace FacebookTest.Controllers
                 var uri = client.GetLoginUrl(new
                 {
                     client_id = ConfigurationManager.AppSettings["FacebookAppId"],
-                    redirect_uri = redirectUri.Uri.AbsoluteUri,
+                    redirect_uri = publicUrl,
                     scope = "email",
                 });
 
