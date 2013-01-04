@@ -61,6 +61,9 @@
     <Reference Include="FluentValidation, Version=3.4.6.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\FluentValidation.3.4.6.0\lib\Net40\FluentValidation.dll</HintPath>
     </Reference>
+    <Reference Include="FluentValidation.Mvc">
+      <HintPath>..\packages\FluentValidation.MVC3.3.4.6.0\lib\Net40\FluentValidation.Mvc.dll</HintPath>
+    </Reference>
     <Reference Include="ICSharpCode.NRefactory">
       <HintPath>..\packages\RavenDB.Database.1.0.960\lib\net40\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>

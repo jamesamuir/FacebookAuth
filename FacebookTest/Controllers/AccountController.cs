@@ -44,7 +44,7 @@ namespace FacebookTest.Controllers
         [HttpPost]
         public ActionResult LogIn(LogInModel model, string returnUrl)
         {
-            if (AccountService.ValidateUser(model.Email, model.Password))
+            if (ModelState.IsValid && AccountService.ValidateUser(model.Email, model.Password))
             {
                 //Get the user
                 var user = AccountService.GetUser(model.Email);
@@ -116,7 +116,7 @@ namespace FacebookTest.Controllers
             {
                 // Build the Return URI form the Request Url
                 var redirectUri = new UriBuilder(Request.Url);
-                redirectUri.Path = Url.Action("FbAuth", "Account");
+                redirectUri.Path = Url.Action("FbReg", "Account");
 
                 //Get the Public Uri due to apphabor getting all "cloudy" with ports
                 var urlHelper = new UrlHelper(Request.RequestContext);
@@ -182,6 +182,9 @@ namespace FacebookTest.Controllers
 
                 return Redirect(uri.ToString());
             }
+
+
+
 
             public ActionResult FbAuth(string returnUrl)
             {
@@ -257,6 +260,82 @@ namespace FacebookTest.Controllers
                         //return Redirect(returnUrl);
                     }
             
+            }
+
+            public ActionResult FbReg(string returnUrl)
+            {
+
+
+                var client = new FacebookClient();
+                try
+                {
+                    var oauthResult = client.ParseOAuthCallbackUrl(Request.Url);
+
+
+                    // Build the Return URI form the Request Url
+                    var redirectUri = new UriBuilder(Request.Url);
+                    redirectUri.Path = Url.Action("FbReg", "Account");
+
+                    //Get the Public Uri due to apphabor getting all "cloudy" with ports
+                    var urlHelper = new UrlHelper(Request.RequestContext);
+                    var publicUrl = urlHelper.ToPublicUrl(redirectUri.Uri);
+
+
+
+
+
+
+                    // Exchange the code for an access token
+                    dynamic result = client.Get("/oauth/access_token", new
+                    {
+                        client_id = ConfigurationManager.AppSettings["FacebookAppId"],
+                        redirect_uri = publicUrl,
+                        client_secret = ConfigurationManager.AppSettings["FacebookAppSecret"],
+                        code = oauthResult.Code,
+                    });
+
+                    // Read the auth values
+                    string accessToken = result.access_token;
+                    DateTime expires = DateTime.UtcNow.AddSeconds(Convert.ToDouble(result.expires));
+
+                    // Get the user's profile information
+                    dynamic me = client.Get("/me",
+                                  new
+                                  {
+                                      fields = "first_name,last_name,email",
+                                      access_token = accessToken
+                                  });
+
+                    // Read the Facebook user values
+                    long facebookId = Convert.ToInt64(me.id);
+                    string firstName = me.first_name;
+                    string lastName = me.last_name;
+                    string email = me.email;
+
+                    //// Add the user to our persistent store
+                    AccountService.AddOrUpdateFacebookUser(facebookId, firstName, lastName, email, accessToken, expires);
+
+                    // Set the Auth Cookie
+                    FormsAuthentication.SetAuthCookie(email, false);
+
+                }
+                catch (Exception ex)
+                {
+                    Elmah.ErrorSignal.FromCurrentContext().Raise(ex);
+                }
+
+
+                // Redirect to the return url if availible
+                if (String.IsNullOrEmpty(returnUrl))
+                {
+                    return RedirectToAction("Index", "Home");
+                }
+                else
+                {
+                    return RedirectToAction("Index", "Home");
+                    //return Redirect(returnUrl);
+                }
+
             }
 
         #endregion
