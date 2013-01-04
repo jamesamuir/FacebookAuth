@@ -15,6 +15,7 @@ namespace FacebookTest.Services.Interfaces
         void DeleteUser(string Id);
         AccountUserDocument GetUser(string email);
         bool ValidateUser(string email, string password);
+        bool ValidateUserEmail(string validateEmailCode, string userId);
         void ProcessForgotPassword(string email);
         void ChangePassword(string email, string newPassword);
 

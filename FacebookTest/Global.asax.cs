@@ -6,6 +6,9 @@ using System.Web.Mvc;
 using System.Web.Routing;
 using Raven.Client.Indexes;
 using FacebookTest.Raven;
+using System.Web.Security;
+using System.Web.Script.Serialization;
+using FacebookTest.Security;
 
 namespace FacebookTest
 {
@@ -44,7 +47,30 @@ namespace FacebookTest
 
             //Register indexes
             IndexCreation.CreateIndexes(typeof(AccountUser_ByFacebookId).Assembly, FacebookTest.Raven.DataDocumentStore.Instance);
-
+            
         }
+
+
+        protected void Application_PostAuthenticateRequest(Object sender, EventArgs e)
+        {
+            HttpCookie authCookie = Request.Cookies[FormsAuthentication.FormsCookieName];
+
+            if (authCookie != null)
+            {
+                FormsAuthenticationTicket authTicket = FormsAuthentication.Decrypt(authCookie.Value);
+
+                JavaScriptSerializer serializer = new JavaScriptSerializer();
+
+                AccountPrincipalSerializeModel serializeModel = serializer.Deserialize<AccountPrincipalSerializeModel>(authTicket.UserData);
+
+                AccountPrincipal newUser = new AccountPrincipal(authTicket.Name);
+                newUser.UserId = serializeModel.UserId;
+                newUser.FirstName = serializeModel.FirstName;
+                newUser.LastName = serializeModel.LastName;
+
+                HttpContext.Current.User = newUser;
+            }
+        }
+
     }
 }

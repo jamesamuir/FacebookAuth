@@ -9,9 +9,14 @@ namespace FacebookTest.Controllers
     public class ContentController : Controller
     {
         //
-        // GET: /Content/
-
+        // GET: /Content/EmailSent
         public ActionResult EmailSent()
+        {
+            return View();
+        }
+        //
+        // GET: /Content/InvalidUrl
+        public ActionResult InvalidUrl()
         {
             return View();
         }

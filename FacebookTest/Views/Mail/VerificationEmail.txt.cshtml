@@ -1,0 +1,19 @@
+﻿@using ActionMailer.Net
+@model FacebookTest.Models.ViewModels.EmailModel
+
+
+@{
+    Layout = null;
+}
+
+<div style="text-align:center">
+<h1>FacebookTest</h1>
+
+<h2>Hello, @Model.FirstName</h2>
+
+<h3>We need you to verify your email.  <a href='@Model.ReturnUrl'>Click here</a> to confirm your email address!</h3>
+
+<p>Link not working? Paste this into your browser</p>
+<p>@Model.ReturnUrl</p>
+
+</div>

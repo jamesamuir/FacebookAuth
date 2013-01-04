@@ -5,7 +5,7 @@ using System.Web;
 
 namespace FacebookTest.Models.DataDocuments
 {
-    public class ResetPasswordDocument
+    public class ReturnEmailDocument
     {
         public string Id { get; set; }
         public string UserId { get; set; }

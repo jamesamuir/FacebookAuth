@@ -11,6 +11,7 @@ using FacebookTest.Models.ViewModels;
 using Raven.Client.Linq;
 using System.Dynamic;
 using System.Configuration;
+using FacebookTest.Controllers;
 
 
 namespace FacebookTest.Services.Classes
@@ -22,7 +23,7 @@ namespace FacebookTest.Services.Classes
         {
             using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
             {
-                return Session.Query<AccountUserDocument>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name == email).SingleOrDefault() == null;
+                return Session.Query<AccountUserDocument>().Where(x => x.Name == email).SingleOrDefault() == null;
             }
         }
 
@@ -86,6 +87,8 @@ namespace FacebookTest.Services.Classes
         {
             using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
             {
+
+                //Persist the new user
                 Guid userId = Guid.NewGuid();
 
                 Session.Store(new AccountUserDocument
@@ -104,7 +107,52 @@ namespace FacebookTest.Services.Classes
                 }.SetPassword(model.Password));
                 Session.SaveChanges();
 
-                return Session.Load<AccountUserDocument>(String.Format("FacebookTest/Users/{0}", userId));
+                //Retrieve user from the document session
+                var user = Session.Load<AccountUserDocument>(String.Format("FacebookTest/Users/{0}", userId));
+
+
+                //Send Validation Email
+                //Create return email object
+                BCryptService crypto = new BCryptService();
+                var identifier = crypto.GenerateToken();
+                var returnEmailDocument = new ReturnEmailDocument
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Identifier = identifier,
+                    Hash = crypto.Hash(identifier)
+
+                };
+
+                //Creste reset Url
+                returnEmailDocument.ResetUrl = ConfigurationManager.AppSettings["BaseUrl"] + "Account/Verify?vac=" + System.Uri.EscapeDataString(returnEmailDocument.Hash);
+
+                //Persist reset object
+                Session.Store(returnEmailDocument);
+                Session.SaveChanges();
+
+
+
+                //Send the email
+                if (user != null)
+                {
+                    EmailModel emailProperties = new EmailModel();
+                    emailProperties.ToAddress = user.Email;
+                    emailProperties.FirstName = user.FirstName;
+                    emailProperties.ReturnUrl = returnEmailDocument.ResetUrl;
+                    new MailController().VerificationEmail(emailProperties).Deliver();
+
+                }
+                else
+                {
+                    throw new Exception("User not found by specified email address");
+                }
+
+                
+
+
+
+                return user;
             }
 
         }
@@ -161,6 +209,39 @@ namespace FacebookTest.Services.Classes
             }
         }
 
+        public bool ValidateUserEmail(string validateEmailCode, string userId)
+        {
+            using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
+            {
+                //Find matching return email document
+                var returnEmailDocument = Session.Query<ReturnEmailDocument>().Where(x => x.Hash == System.Uri.UnescapeDataString(validateEmailCode)).Where(x => x.UserId == userId).SingleOrDefault();
+
+                if (returnEmailDocument != null)
+                {
+                    //Get user based on id
+                    var user = Session.Load<AccountUserDocument>(returnEmailDocument.UserId);
+
+                    //Set the flag
+                    user.EmailVerified = true;
+
+                    //Delete the returnEmailDocument
+                    Session.Advanced.DocumentStore.DatabaseCommands.Delete(returnEmailDocument.Id, null);
+
+                    Session.SaveChanges();
+
+                    //Good to go
+                    return true;
+                }
+                else
+                {
+                    //Couldnt find the document
+                    return false;
+                }
+
+
+            }
+        }
+
         public void ProcessForgotPassword(string email)
         {
             using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
@@ -168,10 +249,10 @@ namespace FacebookTest.Services.Classes
                 //Get user info
                 var user = Session.Query<AccountUserDocument>().Where(x => x.Name == email).SingleOrDefault();
 
-                //Create reset object
+                //Create return email object
                 BCryptService crypto = new BCryptService();
                 var identifier = crypto.GenerateToken();
-                var resetDocument = new ResetPasswordDocument
+                var resetDocument = new ReturnEmailDocument
                 {
                     UserId = user.Id,
                     Email = user.Email,
@@ -181,7 +262,7 @@ namespace FacebookTest.Services.Classes
                 };
 
                 //Creste reset Url
-                resetDocument.ResetUrl = ConfigurationManager.AppSettings["BaseUrl"] + "Account/ResetPassword?prc=" + resetDocument.Hash;
+                resetDocument.ResetUrl = ConfigurationManager.AppSettings["BaseUrl"] + "Account/ResetPassword?prc=" + System.Uri.EscapeDataString(resetDocument.Hash);
 
                 //Persist reset object
                 Session.Store(resetDocument);
@@ -189,15 +270,15 @@ namespace FacebookTest.Services.Classes
                 
                 
 
-
+                //Send the email
                 if (user != null)
                 {
-                    dynamic emailProperties = new ExpandoObject();
-                    emailProperties.Type = EmailType.ForgotPassword;
+                    EmailModel emailProperties = new EmailModel();
                     emailProperties.ToAddress = user.Email;
                     emailProperties.FirstName = user.FirstName;
-                    emailProperties.Url = resetDocument.ResetUrl;
-                    EmailService.SendMail(emailProperties);
+                    emailProperties.ReturnUrl = resetDocument.ResetUrl;
+                    new MailController().VerificationEmail(emailProperties).Deliver();
+                    
                 }
                 else
                 {

@@ -9,7 +9,7 @@ namespace FacebookTest.Services.Classes
     {
         public string GenerateToken()
         {
-            return new Guid().ToString()
+            return Guid.NewGuid().ToString()
                              .ToLowerInvariant()
                              .Replace("-", "");
         }

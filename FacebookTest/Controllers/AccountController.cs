@@ -16,7 +16,7 @@ using System.Web.Script.Serialization;
 
 namespace FacebookTest.Controllers
 {
-    public class AccountController : Controller
+    public class AccountController : BaseController
     {
 
 
@@ -34,6 +34,7 @@ namespace FacebookTest.Controllers
         // GET: /Account/Register
         public ActionResult LogIn()
         {
+            //Return the view
             return View();
         }
 
@@ -41,7 +42,7 @@ namespace FacebookTest.Controllers
         //
         // POST: /Account/Register
         [HttpPost]
-        public ActionResult LogIn(LogInModel model)
+        public ActionResult LogIn(LogInModel model, string returnUrl)
         {
             if (AccountService.ValidateUser(model.Email, model.Password))
             {
@@ -51,8 +52,16 @@ namespace FacebookTest.Controllers
                 //Call the authenticate 
                 AuthenticateUser(user.Id, user.FirstName, user.LastName, user.Email, user.FacebookId, user.AccessToken);
 
-                //Redirect to profile info
-                return RedirectToAction("Index", "Home");
+                //Check for return url
+                if (Url.IsLocalUrl(returnUrl) && returnUrl.Length > 1 && returnUrl.StartsWith("/")
+                    && !returnUrl.StartsWith("//") && !returnUrl.StartsWith("/\\"))
+                {
+                    return Redirect(returnUrl);
+                }
+                else
+                {
+                    return RedirectToAction("Index", "Home");
+                }
             }
             else
             {
@@ -252,15 +261,43 @@ namespace FacebookTest.Controllers
 
         #endregion
 
+        #region Verify
+
+            // GET: /Account/Verify
+            [Authorize]
+            public ActionResult Verify(string vac)
+            {
+
+                
+
+                //Try to validte the email based on the hash code
+                if (AccountService.ValidateUserEmail(vac, User.UserId))
+                {
+                    return RedirectToAction("Index", "Home", new { });
+                }
+                else
+                {
+                    return RedirectToAction("InvalidUrl", "Content");
+                }
+
+              
+            }
+
+
+
+        #endregion
+    
         #region ForgotPassword
             // GET: /Account/ForgotPassword
+            [Authorize]
             public ActionResult ForgotPassword()
             {
                 ForgotPasswordModel model = new ForgotPasswordModel();
                 return View(model);
             }
             //
-            // POST: /Account/Register
+            // POST: /Account/ForgotPassword
+            [Authorize]
             [HttpPost]
             public ActionResult ForgotPassword(ForgotPasswordModel model)
             {
@@ -273,17 +310,22 @@ namespace FacebookTest.Controllers
                     return RedirectToAction("Content", "EmailSent", new { });
                 }
 
+
+
                 return View(model);
             }
         #endregion
         
         #region Logoff
+
             // GET: /Account/Register
+            [Authorize]
             public ActionResult Logoff()
             {
                 FormsAuthentication.SignOut();
                 return RedirectToAction("Index", "Home", new { });
             }
+
         #endregion
 
         #region Authenticate User
