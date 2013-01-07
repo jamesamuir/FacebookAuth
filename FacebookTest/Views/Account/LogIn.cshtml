@@ -28,10 +28,13 @@
                 @Html.TextBoxFor(m => m.Password)
                 @Html.ValidationMessageFor(m => m.Password)
             </div>
-
+            <p>
+                @Html.ActionLink("Forgot your password?", "ForgotPassword")
+            </p>
             <p>
                 <input type="submit" value="Submit" />
             </p>
+
        
     </div>
 }

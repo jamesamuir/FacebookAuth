@@ -21,5 +21,13 @@ namespace FacebookTest.Controllers
             return Email("VerificationEmail", emailModel);
         }
 
+        public EmailResult ForgotPasswordEmail(EmailModel emailModel)
+        {
+            To.Add(emailModel.ToAddress);
+            From = ConfigurationManager.AppSettings["AdminEmail"].ToString();
+            Subject = "Reset your password";
+            return Email("ForgotPasswordEmail", emailModel);
+        }
+
     }
 }

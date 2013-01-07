@@ -1,5 +1,4 @@
-﻿
-@model FacebookTest.Models.ViewModels.RegisterModel
+﻿@model FacebookTest.Models.ViewModels.FbModel
 
 @{
     ViewBag.Title = "Register";
@@ -17,21 +16,8 @@
         <fieldset>
             <legend>Account Information</legend>
 
-            <div class="editor-label">
-                @Html.LabelFor(m => m.FirstName)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(m => m.FirstName)
-                @Html.ValidationMessageFor(m => m.FirstName)
-            </div>
 
-            <div class="editor-label">
-                @Html.LabelFor(m => m.LastName)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(m => m.LastName)
-                @Html.ValidationMessageFor(m => m.LastName)
-            </div>
+            <p>Facebook connected as @Model.FirstName @Model.LastName</p>
 
             <div class="editor-label">
                 @Html.LabelFor(m => m.Email)
@@ -56,6 +42,8 @@
                 @Html.PasswordFor(m => m.ConfirmPassword)
                 @Html.ValidationMessageFor(m => m.ConfirmPassword)
             </div>
+
+            @Html.HiddenFor(m => m.Code)
 
             <p>
                 <input type="submit" value="Create Account" />

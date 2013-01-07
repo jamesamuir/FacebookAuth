@@ -10,13 +10,17 @@ namespace FacebookTest.Services.Interfaces
     public interface IAccountService
     {
         bool IsAvailableUser(string email);
-        AccountUserDocument AddOrUpdateFacebookUser(long facebookId, string firstName, string lastName, string email, string accessToken, DateTime expires);
+        AccountUserDocument ActivateFacebookAccount(FbModel model);
+        AccountUserDocument AddOrUpdateFacebookUser(FbModel model);
+        FbModel GetFbModelByAccountHash(string accountHash);
         AccountUserDocument CreateUser(RegisterModel model);
         void DeleteUser(string Id);
         AccountUserDocument GetUser(string email);
         bool ValidateUser(string email, string password);
         bool ValidateUserEmail(string validateEmailCode, string userId);
-        void ProcessForgotPassword(string email);
+        void ProcessForgotPassword(ForgotPasswordModel model);
+        bool IsValidResetUrl(string documentHash);
+        void ResetPassword(ResetPasswordModel model);
         void ChangePassword(string email, string newPassword);
 
     }

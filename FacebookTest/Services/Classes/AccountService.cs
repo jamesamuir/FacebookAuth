@@ -12,6 +12,7 @@ using Raven.Client.Linq;
 using System.Dynamic;
 using System.Configuration;
 using FacebookTest.Controllers;
+using FacebookTest.Exceptions;
 
 
 namespace FacebookTest.Services.Classes
@@ -27,27 +28,51 @@ namespace FacebookTest.Services.Classes
             }
         }
 
-        public AccountUserDocument AddOrUpdateFacebookUser(long facebookId, string firstName, string lastName, string email, string accessToken, DateTime expires)
+        public AccountUserDocument ActivateFacebookAccount(FbModel model)
+        {
+            using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
+            {
+                var user = Session.Query<AccountUserDocument>().Where(x => x.AccountHash == model.Code).SingleOrDefault();
+                if (user != null)
+                {
+                    user.Email = model.Email;
+                    user.SetPassword(model.Password);
+                    Session.SaveChanges();
+                    return user;
+                }
+                else
+                {
+                    throw new UserNotFoundException("User was not found while trying to active facebook acount", new Exception("AccountHash is " + model.Code));
+                }
+                
+
+            }
+        }
+
+        public AccountUserDocument AddOrUpdateFacebookUser(FbModel model)
         {
             using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
             {
 
+                BCryptService crypto = new BCryptService();
+
+
                 //Get the user by their facebook Id
-                var user = Session.Query<AccountUserDocument, AccountUser_ByFacebookId>().Where(x => x.FacebookId == facebookId).SingleOrDefault();
-                
+                var user = Session.Query<AccountUserDocument, AccountUser_ByFacebookId>().Where(x => x.FacebookId == model.FacebookId).SingleOrDefault();
 
 
                 if (user != null)
                 {
                     //User exists, update it
-                    user.Name = email;
+                    user.Name = model.Email;
+                    user.FacebookEmail = model.Email;
                     user.AllowedDatabases = new[] { "*" };
-                    user.FirstName = firstName;
-                    user.LastName = lastName;
-                    user.AccessToken = accessToken;
-                    user.FacebookId = facebookId;
-                    user.Expires = expires;
-
+                    user.FirstName = model.FirstName;
+                    user.LastName = model.LastName;
+                    user.AccessToken = model.AccessToken;
+                    user.FacebookId = model.FacebookId;
+                    user.Expires = model.Expires;
+                    user.AccountHash = System.Uri.EscapeDataString(crypto.Hash(model.FacebookId.ToString()));
 
                     //Save Changes
                     Session.SaveChanges();
@@ -60,14 +85,16 @@ namespace FacebookTest.Services.Classes
                     Session.Store(new AccountUserDocument
                     {
                         
-                        Name = email,
+                        Name = model.Email,
+                        FacebookEmail = model.Email,
                         Id = String.Format("FacebookTest/Users/{0}", userId.ToString()),
                         AllowedDatabases = new[] { "*" },
-                        FirstName = firstName,
-                        LastName = lastName,
-                        AccessToken = accessToken,
-                        FacebookId = facebookId,
-                        Expires = expires
+                        FirstName = model.FirstName,
+                        LastName = model.LastName,
+                        AccessToken = model.AccessToken,
+                        FacebookId = model.FacebookId,
+                        Expires = model.Expires,
+                        AccountHash = System.Uri.EscapeDataString(crypto.Hash(model.FacebookId.ToString()))
                     });
 
                     //Save Changes
@@ -81,6 +108,36 @@ namespace FacebookTest.Services.Classes
                 
             }
 
+        }
+
+        public FbModel GetFbModelByAccountHash(string accountHash)
+        {
+            using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
+            {
+                var user = Session.Query<AccountUserDocument>().Where(x => x.AccountHash == accountHash);
+
+                if (user != null)
+                {
+
+                    var model = (from t in user
+                                 select new FbModel
+                                 {
+                                     FirstName = t.FirstName,
+                                     LastName = t.LastName,
+                                     AccessToken = t.AccessToken,
+                                     Code = t.AccountHash
+
+                                 }).Single();
+
+                    return model;
+
+                }
+                else
+                {
+                    return null;
+                }
+
+            }
         }
 
         public AccountUserDocument CreateUser(RegisterModel model)
@@ -242,12 +299,12 @@ namespace FacebookTest.Services.Classes
             }
         }
 
-        public void ProcessForgotPassword(string email)
+        public void ProcessForgotPassword(ForgotPasswordModel model)
         {
             using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
             {
                 //Get user info
-                var user = Session.Query<AccountUserDocument>().Where(x => x.Name == email).SingleOrDefault();
+                var user = Session.Query<AccountUserDocument>().Where(x => x.Email == model.Email).SingleOrDefault();
 
                 //Create return email object
                 BCryptService crypto = new BCryptService();
@@ -257,7 +314,9 @@ namespace FacebookTest.Services.Classes
                     UserId = user.Id,
                     Email = user.Email,
                     Identifier = identifier,
-                    Hash = crypto.Hash(identifier)
+                    Hash = crypto.Hash(identifier),
+                    Timestamp = DateTime.Now
+
 
                 };
 
@@ -277,17 +336,67 @@ namespace FacebookTest.Services.Classes
                     emailProperties.ToAddress = user.Email;
                     emailProperties.FirstName = user.FirstName;
                     emailProperties.ReturnUrl = resetDocument.ResetUrl;
-                    new MailController().VerificationEmail(emailProperties).Deliver();
+                    new MailController().ForgotPasswordEmail(emailProperties).Deliver();
                     
                 }
                 else
                 {
-                    throw new Exception("User not found by specified email address");
+                    throw new UserNotFoundException("User not found by specified email address");
                 }
 
             }
         }
 
+        public bool IsValidResetUrl(string documentHash)
+        {
+            using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
+            {
+                //Find matching return email document
+                var returnEmailDocument = Session.Query<ReturnEmailDocument>().Where(x => x.Hash == System.Uri.UnescapeDataString(documentHash)).Where(x => x.Timestamp <= System.DateTime.Now.AddDays(1)).SingleOrDefault();
+
+                if (returnEmailDocument != null)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+
+
+            }
+        }
+
+        public void ResetPassword(ResetPasswordModel model)
+        {
+            using (IDocumentSession Session = DataDocumentStore.Instance.OpenSession())
+            {
+                //Find matching return email document
+                var returnEmailDocument = Session.Query<ReturnEmailDocument>().Where(x => x.Hash == System.Uri.UnescapeDataString(model.Code)).Where(x => x.Timestamp <= System.DateTime.Now.AddDays(1)).SingleOrDefault();
+
+                if (returnEmailDocument != null)
+                {
+                    //Get user based on id
+                    var user = Session.Load<AccountUserDocument>(returnEmailDocument.UserId);
+
+                    //Set the flag
+                    user.SetPassword(model.Password);
+
+                    //Delete the returnEmailDocument
+                    Session.Advanced.DocumentStore.DatabaseCommands.Delete(returnEmailDocument.Id, null);
+
+                    Session.SaveChanges();
+
+         
+                }
+                else
+                {
+                    throw new ReturnEmailNotFoundException();
+                }
+
+
+            }
+        }
 
 
         public void ChangePassword(string id, string newPassword)

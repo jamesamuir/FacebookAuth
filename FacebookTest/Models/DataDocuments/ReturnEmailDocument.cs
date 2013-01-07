@@ -13,6 +13,7 @@ namespace FacebookTest.Models.DataDocuments
         public string Identifier { get; set; }
         public string Hash { get; set; }
         public string ResetUrl { get; set; }
+        public DateTime Timestamp { get; set; }
         
 
     }

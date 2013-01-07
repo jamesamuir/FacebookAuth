@@ -13,6 +13,7 @@ using FacebookTest.Services.Classes;
 using FacebookTest.Services.Interfaces;
 using FacebookTest.Security;
 using System.Web.Script.Serialization;
+using FacebookTest.Exceptions;
 
 namespace FacebookTest.Controllers
 {
@@ -116,7 +117,7 @@ namespace FacebookTest.Controllers
             {
                 // Build the Return URI form the Request Url
                 var redirectUri = new UriBuilder(Request.Url);
-                redirectUri.Path = Url.Action("FbReg", "Account");
+                redirectUri.Path = Url.Action("FbAuth", "Account");
 
                 //Get the Public Uri due to apphabor getting all "cloudy" with ports
                 var urlHelper = new UrlHelper(Request.RequestContext);
@@ -183,9 +184,6 @@ namespace FacebookTest.Controllers
                 return Redirect(uri.ToString());
             }
 
-
-
-
             public ActionResult FbAuth(string returnUrl)
             {
 
@@ -230,17 +228,33 @@ namespace FacebookTest.Controllers
                                           access_token = accessToken
                                       });
 
+                        //Instantiate FbModel
+                        var model = new FbModel();
+
                         // Read the Facebook user values
-                        long facebookId = Convert.ToInt64(me.id);
-                        string firstName = me.first_name;
-                        string lastName = me.last_name;
-                        string email = me.email;
+                        model.FacebookId = Convert.ToInt64(me.id);
+                        model.FirstName = me.first_name;
+                        model.LastName = me.last_name;
+                        model.Email = me.email;
 
-                        //// Add the user to our persistent store
-                        AccountService.AddOrUpdateFacebookUser(facebookId, firstName, lastName, email, accessToken, expires);
 
-                        // Set the Auth Cookie
-                        FormsAuthentication.SetAuthCookie(email, false);
+                        // Add the user to our persistent store
+                        var user = AccountService.AddOrUpdateFacebookUser(model);
+
+
+                        //Check if the account requires the password to be set
+                        if (string.IsNullOrEmpty(user.Email))
+                        {
+
+                            return RedirectToAction("RegisterFacebook", "Account", new { @code = user.AccountHash }); 
+                        }
+                        else
+                        {
+                            AuthenticateUser(user.Id, user.FirstName, user.LastName, user.Email, user.FacebookId, user.AccessToken);
+                            return RedirectToAction("Index", "Home");
+                        }
+
+                        
 
                     }
                     catch (Exception ex)
@@ -249,94 +263,56 @@ namespace FacebookTest.Controllers
                     }
 
 
-                    // Redirect to the return url if availible
-                    if (String.IsNullOrEmpty(returnUrl))
-                    {
-                        return RedirectToAction("Index", "Home");
-                    }
-                    else
-                    {
-                        return RedirectToAction("Index", "Home");
-                        //return Redirect(returnUrl);
-                    }
+                    return RedirectToAction("Content", "Error");
             
             }
 
-            public ActionResult FbReg(string returnUrl)
+
+            // GET: /Account/RegisterFacebook
+            public ActionResult RegisterFacebook(string code)
             {
 
-
-                var client = new FacebookClient();
-                try
+                var model = AccountService.GetFbModelByAccountHash(code);
+                if (model != null)
                 {
-                    var oauthResult = client.ParseOAuthCallbackUrl(Request.Url);
-
-
-                    // Build the Return URI form the Request Url
-                    var redirectUri = new UriBuilder(Request.Url);
-                    redirectUri.Path = Url.Action("FbReg", "Account");
-
-                    //Get the Public Uri due to apphabor getting all "cloudy" with ports
-                    var urlHelper = new UrlHelper(Request.RequestContext);
-                    var publicUrl = urlHelper.ToPublicUrl(redirectUri.Uri);
-
-
-
-
-
-
-                    // Exchange the code for an access token
-                    dynamic result = client.Get("/oauth/access_token", new
-                    {
-                        client_id = ConfigurationManager.AppSettings["FacebookAppId"],
-                        redirect_uri = publicUrl,
-                        client_secret = ConfigurationManager.AppSettings["FacebookAppSecret"],
-                        code = oauthResult.Code,
-                    });
-
-                    // Read the auth values
-                    string accessToken = result.access_token;
-                    DateTime expires = DateTime.UtcNow.AddSeconds(Convert.ToDouble(result.expires));
-
-                    // Get the user's profile information
-                    dynamic me = client.Get("/me",
-                                  new
-                                  {
-                                      fields = "first_name,last_name,email",
-                                      access_token = accessToken
-                                  });
-
-                    // Read the Facebook user values
-                    long facebookId = Convert.ToInt64(me.id);
-                    string firstName = me.first_name;
-                    string lastName = me.last_name;
-                    string email = me.email;
-
-                    //// Add the user to our persistent store
-                    AccountService.AddOrUpdateFacebookUser(facebookId, firstName, lastName, email, accessToken, expires);
-
-                    // Set the Auth Cookie
-                    FormsAuthentication.SetAuthCookie(email, false);
-
-                }
-                catch (Exception ex)
-                {
-                    Elmah.ErrorSignal.FromCurrentContext().Raise(ex);
-                }
-
-
-                // Redirect to the return url if availible
-                if (String.IsNullOrEmpty(returnUrl))
-                {
-                    return RedirectToAction("Index", "Home");
+                    return View(model);
                 }
                 else
                 {
-                    return RedirectToAction("Index", "Home");
-                    //return Redirect(returnUrl);
+                    return RedirectToAction("Content", "InvalidUrl");
                 }
 
+                
+
+
             }
+
+            // GET: /Account/RegisterFacebook
+            [HttpPost]
+            public ActionResult RegisterFacebook(FbModel model)
+            {
+
+                if (ModelState.IsValid)
+                {
+                    try
+                    {
+                        var user = AccountService.ActivateFacebookAccount(model);
+                        AuthenticateUser(user.Id, user.FirstName, user.LastName, user.Email, user.FacebookId, user.AccessToken);
+                        return RedirectToAction("Home", "Index");
+                    }
+                    catch (UserNotFoundException ex)
+                    {
+                        return RedirectToAction("Error", "Content");
+                    }
+                }
+                else
+                {
+                    return View(model);
+                }
+
+
+            }
+
 
         #endregion
 
@@ -368,7 +344,7 @@ namespace FacebookTest.Controllers
     
         #region ForgotPassword
             // GET: /Account/ForgotPassword
-            [Authorize]
+       
             public ActionResult ForgotPassword()
             {
                 ForgotPasswordModel model = new ForgotPasswordModel();
@@ -376,7 +352,7 @@ namespace FacebookTest.Controllers
             }
             //
             // POST: /Account/ForgotPassword
-            [Authorize]
+
             [HttpPost]
             public ActionResult ForgotPassword(ForgotPasswordModel model)
             {
@@ -385,13 +361,55 @@ namespace FacebookTest.Controllers
                 if (ModelState.IsValid)
                 {
 
-
-                    return RedirectToAction("Content", "EmailSent", new { });
+                    AccountService.ProcessForgotPassword(model);
+                    return RedirectToAction("EmailSent", "Content", new { });
                 }
 
 
 
                 return View(model);
+            }
+
+            // GET: /Account/ResetPassword
+            public ActionResult ResetPassword(string prc)
+            {
+                if (AccountService.IsValidResetUrl(prc))
+                {
+                    ResetPasswordModel model = new ResetPasswordModel();
+                    return View(model);
+                }
+                else
+                {
+                    return RedirectToAction("InvalidUrl", "Content");
+                }
+            }
+
+
+            [HttpPost]
+            public ActionResult ResetPassword(ResetPasswordModel model)
+            {
+
+                //validate model, set new password
+                if (ModelState.IsValid)
+                {
+                    try
+                    {
+                        model.Code = Request.Params["prc"];
+                        AccountService.ResetPassword(model);
+                        return RedirectToAction("Index", "Home", new { });
+                    }
+                    catch (ReturnEmailNotFoundException ex)
+                    {
+                        return RedirectToAction("InvalidUrl", "Content");
+                    }
+                }
+                else
+                {
+                    return View(model);
+                }
+
+
+
             }
         #endregion
         

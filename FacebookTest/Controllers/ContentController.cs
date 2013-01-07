@@ -20,6 +20,11 @@ namespace FacebookTest.Controllers
         {
             return View();
         }
-
+        //
+        // GET: /Content/Error
+        public ActionResult Error()
+        {
+            return View();
+        }
     }
 }
