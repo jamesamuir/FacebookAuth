@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("FacebookTest")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Tyco Electronics")]
-[assembly: AssemblyProduct("FacebookTest")]
-[assembly: AssemblyCopyright("Copyright © Tyco Electronics 2012")]
+[assembly: AssemblyCompany("sneedog.inc")]
+[assembly: AssemblyProduct("sneedog.FacebookTest")]
+[assembly: AssemblyCopyright("Copyright © sneedog.inc")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
